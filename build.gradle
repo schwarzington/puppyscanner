@@ -1,0 +1,13 @@
+apply plugin: 'java'
+apply plugin: 'eclipse'
+repositories {
+    mavenCentral()
+}
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+dependencies {
+    compile 'org.jsoup:jsoup:1.7.2'
+    compile 'org.apache.solr:solr-solrj:5.4.1'
+
+}
