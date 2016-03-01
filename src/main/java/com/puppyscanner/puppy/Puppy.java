@@ -2,21 +2,24 @@ package com.puppyscanner.puppy;
 
 import java.util.Date;
 
+import com.puppyscanner.solr.PuppyScannerSolrUtil;
+
 public class Puppy {
 	protected String name;
 	protected String gender;
 	protected int age;
 	protected String id;
 	protected String size;
-	protected String color;
-	protected String breed;
+	protected String[] color;
+	protected String[] breed;
 	protected String location;
 	protected Date intakeDate;
 	protected float cost;
 	protected String[] pictureURL;
 	protected String description;
+	protected String cleanDescription;
 
-	public Puppy(String pName, String pGender, int pAge, String pBreed) {
+	public Puppy(String pName, String pGender, int pAge, String[] pBreed) {
 		this.name = pName;
 		this.gender = pGender;
 		this.age = pAge;
@@ -63,19 +66,19 @@ public class Puppy {
 		this.size = size;
 	}
 
-	public String getColor() {
+	public String[] getColor() {
 		return color;
 	}
 
-	public void setColor(String color) {
+	public void setColor(String[] color) {
 		this.color = color;
 	}
 
-	public String getBreed() {
+	public String[] getBreed() {
 		return breed;
 	}
 
-	public void setBreed(String breed) {
+	public void setBreed(String[] breed) {
 		this.breed = breed;
 	}
 
@@ -117,6 +120,12 @@ public class Puppy {
 
 	public void setDescription(String description) {
 		this.description = description;
+		PuppyScannerSolrUtil util = new PuppyScannerSolrUtil();
+		this.cleanDescription = util.textFilter(description);
+	}
+
+	public String getCleanDescription() {
+		return cleanDescription;
 	}
 
 }
