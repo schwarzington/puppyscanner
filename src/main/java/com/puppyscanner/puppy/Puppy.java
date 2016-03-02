@@ -18,12 +18,21 @@ public class Puppy {
 	protected String[] pictureURL;
 	protected String description;
 	protected String cleanDescription;
+	protected String shelter;
 
 	public Puppy(String pName, String pGender, int pAge, String[] pBreed) {
 		this.name = pName;
 		this.gender = pGender;
 		this.age = pAge;
 		this.breed = pBreed;
+	}
+	
+	public String getShelter() {
+		return shelter;
+	}
+
+	public void setShelter(String shelter) {
+		this.shelter = shelter;
 	}
 
 	public String getName() {
