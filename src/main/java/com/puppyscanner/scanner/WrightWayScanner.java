@@ -7,6 +7,8 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -20,6 +22,9 @@ public class WrightWayScanner implements Scanner{
 	private final String WW_PUPPY_URL = "http://www.petango.com/webservices/adoptablesearch/wsAdoptableAnimals.aspx?species=Dog&sex=A&agegroup=UnderYear&location=&site=&onhold=A&orderby=Name&colnum=4&css=http://www.petango.com/WebServices/adoptablesearch/css/styles.css&authkey=io53xfw8b0k2ocet3yb83666507n2168taf513lkxrqe681kf8&recAmount=&detailsInPopup=No&featuredPet=Include&stageID=";
 	private final String WW_DOG_URL = "http://www.petango.com/webservices/adoptablesearch/wsAdoptableAnimals.aspx?species=Dog&sex=A&agegroup=OverYear&location=&site=&onhold=A&orderby=Name&colnum=4&css=http://www.petango.com/WebServices/adoptablesearch/css/styles.css&authkey=io53xfw8b0k2ocet3yb83666507n2168taf513lkxrqe681kf8&recAmount=&detailsInPopup=No&featuredPet=Include&stageID=";
 	private final String WW_FULL_INFO_URL = "http://www.petango.com/webservices/adoptablesearch/wsAdoptableAnimalDetails.aspx?id=";
+	private final String LOCATION = "42.035139,-87.7770977";
+	private final String SHELTER = "Wright-Way Rescue";
+	static final Logger logger = LogManager.getLogger(WrightWayScanner.class.getName());
 	public ArrayList<Puppy> scan(){
 		System.out.println("Starting scan");
 		SimpleDateFormat formatter = new SimpleDateFormat("mm/dd/yyyy");
@@ -27,7 +32,7 @@ public class WrightWayScanner implements Scanner{
 		Document doc, doc2;
 		PuppyScannerSolrUtil util = new PuppyScannerSolrUtil();
 		try {
-			System.out.println("Attemping to Connect");
+			logger.info("Attemping to Connect");
 			doc = Jsoup.connect(WW_PUPPY_URL).get();
 			Elements listed_puppies = doc.select(".list-item");
 			doc2 = Jsoup.connect(WW_DOG_URL).get();
@@ -39,17 +44,27 @@ public class WrightWayScanner implements Scanner{
 			for(Element dog: listed_dogs){
 				 scannedPuppies.add(dog.select(".list-animal-id").text());
 			}
-			ArrayList<String>currentPuppies = util.getPuppiesByShelter("Wright-Way Rescue");
+			
+			scannedPuppies = util.cleanList(scannedPuppies);
+			ArrayList<String>currentPuppies = util.cleanList(util.getPuppiesByShelter("Wright-Way Rescue"));
 			ArrayList<String>puppiesToBeAdded = util.compareList(scannedPuppies, currentPuppies);
 			ArrayList<String>puppiesToBeDeleted = util.compareList(currentPuppies, scannedPuppies);
 			
 			for (String id : puppiesToBeAdded) {
 				try {
+					ArrayList<String>images = new ArrayList<String>();
 					Document puppyFullInfo = Jsoup.connect(WW_FULL_INFO_URL + id).get();
 					String name = puppyFullInfo.select("#lbName").first().text();
 					String[] breeds  = puppyFullInfo.select("#trBreed > .detail-value").first().text().split(",");
 					String[] colors  = puppyFullInfo.select("#lblColor").first().text().split("/");
 					String[] age = puppyFullInfo.select("#lbAge").first().text().split(" ");
+					images.add(puppyFullInfo.select("#imgAnimalPhoto").first().absUrl("src"));
+					Elements imageSrcs = puppyFullInfo.select("a[id^='lnkPhoto']");
+					if(!imageSrcs.isEmpty()){
+						for(Element img: imageSrcs){
+							images.add(img.absUrl("href"));
+						}
+					}
 					int sumAge = 0;
 					for(int i = 0; i < age.length; i+= 2){
 						if(age[i+1].toLowerCase().contains("year")){
@@ -58,7 +73,6 @@ public class WrightWayScanner implements Scanner{
 							sumAge += Integer.parseInt(age[i]);
 						}
 					}
-					String location = "42.035139,-87.7770977";
 					String description = puppyFullInfo.select("#lbDescription").first().text();
 					Date intakeDate = formatter.parse(puppyFullInfo.select("#lblIntakeDate").first().text());
 					String size = puppyFullInfo.select("#lblSize").first().text();
@@ -67,26 +81,31 @@ public class WrightWayScanner implements Scanner{
 					float price = number.floatValue();
 					String sex = puppyFullInfo.select("#lbSex").first().text();
 					Puppy p = new Puppy(name, sex, sumAge, breeds);
-					p.setShelter("Wright-Way Rescue");
+					p.setShelter(SHELTER);
 					p.setId(id);
 					p.setColor(colors);
-					p.setLocation(location);
+					p.setLocation(LOCATION);
 					p.setDescription(description);
 					p.setIntakeDate(intakeDate);
 					p.setSize(size);
 					p.setCost(price);
+					ArrayList<String> imgLocations = util.getImages(images, id);
+					p.setPictureURL(imgLocations.toArray(new String[imgLocations.size()]));
 					puppies.add(p);
 				} catch (NullPointerException e){
+					logger.debug("One of the fields is null, moving on");
 					continue;
 				}
 			}
 			util.insertPuppies(puppies);
+			util.deletePuppies(puppiesToBeDeleted);
 		} catch (IOException | ParseException e) {
 			// TODO Auto-generated catch block
-			System.out.println(e.getMessage());
+			logger.error(e.getMessage());
 			e.printStackTrace();
 		} catch (SolrServerException | NullPointerException e) {
 			// TODO Auto-generated catch block
+			logger.error(e.getMessage());
 			e.printStackTrace();
 		}
 		
