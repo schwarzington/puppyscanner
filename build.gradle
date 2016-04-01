@@ -3,6 +3,19 @@ apply plugin: 'eclipse'
 repositories {
     mavenCentral()
 }
+version = '1.0'
+
+//create a single Jar with all dependencies
+task fatJar(type: Jar) {
+	manifest {
+        attributes 'Implementation-Title': 'Puppy Scanner',  
+        	'Implementation-Version': version,
+        	'Main-Class': 'com.puppyscanner.main'
+    }
+    baseName = project.name
+    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+    with jar
+}
 
 dependencies {
     compile 'org.jsoup:jsoup:1.7.2'

@@ -10,7 +10,7 @@ public class ScannerUtil {
 	public Properties initializeProperties(){
 		Properties properties = null;
 		try {
-			File file = new File("classes/pupperties.properties");
+			File file = new File("/puppyData/pupperties.properties");
 			FileInputStream fileInput = new FileInputStream(file);
 			properties = new Properties();
 			properties.load(fileInput);
